@@ -1,0 +1,597 @@
+!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Собери цвет Кэтрин — Игра-головоломка</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none; /* чтобы не мелькало выделение при перетаскивании ползунков */
+        }
+
+        body {
+            background: linear-gradient(145deg, #101010 0%, #1a1a2e 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Segoe UI', 'Roboto', 'Georgia', serif;
+            margin: 0;
+            padding: 20px;
+        }
+
+        /* Игровой контейнер */
+        .game-container {
+            max-width: 780px;
+            width: 100%;
+            background: rgba(30, 30, 40, 0.85);
+            backdrop-filter: blur(2px);
+            border-radius: 56px;
+            padding: 24px 22px 36px;
+            box-shadow: 0 25px 45px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 215, 150, 0.3);
+            transition: all 0.2s;
+        }
+
+        /* Заголовок */
+        .game-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .game-header h1 {
+            font-size: 1.9rem;
+            letter-spacing: 1px;
+            background: linear-gradient(135deg, #f5e7d9, #e3c9a0);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            margin: 0 0 6px 0;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        .sub {
+            color: #b9b3a6;
+            font-style: italic;
+            border-top: 1px solid rgba(255,200,120,0.3);
+            display: inline-block;
+            padding-top: 6px;
+            font-size: 0.9rem;
+        }
+
+        /* Зона фотографии */
+        .photo-stage {
+            background: #1e1c1a;
+            border-radius: 32px;
+            padding: 20px;
+            box-shadow: inset 0 0 12px #00000044, 0 12px 24px rgba(0,0,0,0.3);
+            margin-bottom: 28px;
+            border: 1px solid #5a4a3a;
+        }
+        .image-wrapper {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #2c241e;
+            border-radius: 24px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px black;
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: auto;
+            background: #2b2b2b;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: filter 0.1s ease;
+        }
+        /* инфо под фото */
+        .attempt-counter {
+            text-align: right;
+            font-family: monospace;
+            font-size: 1.2rem;
+            margin-top: 12px;
+            color: #e0cfb1;
+            background: #00000066;
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 60px;
+            backdrop-filter: blur(4px);
+        }
+        .counter-wrap {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 10px;
+        }
+        .hint-btn {
+            background: #2c241e;
+            border: 1px solid #c7a55b;
+            padding: 6px 18px;
+            border-radius: 60px;
+            color: #fad98b;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: 0.2s;
+        }
+        .hint-btn:hover {
+            background: #4a3a2c;
+            color: white;
+            border-color: #ffcf7a;
+            box-shadow: 0 0 8px rgba(255,200,100,0.5);
+        }
+
+        /* Панель RGB */
+        .rgb-panel {
+            background: #24222bdd;
+            backdrop-filter: blur(8px);
+            border-radius: 48px;
+            padding: 18px 24px;
+            margin: 18px 0 12px;
+            border: 1px solid #665a48;
+        }
+        .slider-group {
+            margin-bottom: 22px;
+        }
+        .slider-group label {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            font-weight: bold;
+            font-size: 1.3rem;
+            letter-spacing: 1px;
+            color: #f2e5cf;
+        }
+        .label-r { color: #ff8888; text-shadow: 0 0 3px red; }
+        .label-g { color: #88ff88; text-shadow: 0 0 3px green; }
+        .label-b { color: #8888ff; text-shadow: 0 0 3px blue; }
+        .value-display {
+            font-family: monospace;
+            background: #000000aa;
+            padding: 4px 12px;
+            border-radius: 40px;
+            font-size: 1.2rem;
+            min-width: 65px;
+            text-align: center;
+        }
+        input[type=range] {
+            flex: 1;
+            height: 6px;
+            -webkit-appearance: none;
+            background: #3a3a44;
+            border-radius: 10px;
+            outline: none;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 6px white;
+        }
+        .slider-r::-webkit-slider-thumb { background: #ff5555; }
+        .slider-g::-webkit-slider-thumb { background: #55ff55; }
+        .slider-b::-webkit-slider-thumb { background: #5555ff; }
+
+        /* Сообщение о победе */
+        .victory-message {
+            background: #2a241bb3;
+            backdrop-filter: blur(12px);
+            border-left: 8px solid #e6b450;
+            padding: 16px 20px;
+            border-radius: 28px;
+            margin-top: 20px;
+            color: #ffefcf;
+            font-size: 1rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+        .victory-message strong {
+            color: #ffd966;
+            font-size: 1.1rem;
+        }
+        .hidden {
+            display: none;
+        }
+        .footer-note {
+            font-size: 0.7rem;
+            text-align: center;
+            margin-top: 24px;
+            color: #7e6f5a;
+        }
+        button {
+            background: none;
+            border: none;
+        }
+    </style>
+</head>
+<body>
+
+<div class="game-container">
+    <div class="game-header">
+        <h1>🎭 СОБЕРИ ЦВЕТ КЭТРИН</h1>
+        <div class="sub">Тартановая лента — первая цветная фотография в истории</div>
+    </div>
+
+    <div class="photo-stage">
+        <div class="image-wrapper">
+            <canvas id="photoCanvas" width="600" height="400" style="width:100%; height:auto; max-width:600px; aspect-ratio:600/400"></canvas>
+        </div>
+        <div class="counter-wrap">
+            <div class="attempt-counter">🎞️ Попыток: <span id="attemptCount">0</span></div>
+            <div class="hint-btn" id="hintButton">✨ Подсказка</div>
+        </div>
+    </div>
+
+    <div class="rgb-panel">
+        <div class="slider-group">
+            <label><span class="label-r">🔴 RED</span>
+                <input type="range" id="redSlider" class="slider-r" min="0" max="255" value="80">
+                <span id="redVal" class="value-display">80</span>
+            </label>
+        </div>
+        <div class="slider-group">
+            <label><span class="label-g">🟢 GREEN</span>
+                <input type="range" id="greenSlider" class="slider-g" min="0" max="255" value="80">
+                <span id="greenVal" class="value-display">80</span>
+            </label>
+        </div>
+        <div class="slider-group">
+            <label><span class="label-b">🔵 BLUE</span>
+                <input type="range" id="blueSlider" class="slider-b" min="0" max="255" value="80">
+                <span id="blueVal" class="value-display">80</span>
+            </label>
+        </div>
+    </div>
+
+    <div id="victoryBox" class="victory-message hidden">
+        <strong>📸 1861 год. Джеймс Максвелл получил первое в мире цветное фото!</strong><br>
+        На нём — бант из лент его жены Кэтрин. <br>
+        <span style="font-size:0.95rem;">✨ Это ты только что воссоздал. ✨</span><br>
+        <span style="font-size:0.8rem;">Красно-зелёный шелк, жёлтая отделка — магия трёхцветного синтеза.</span>
+    </div>
+    <div class="footer-note">
+        * Подберите точные значения RGB, чтобы лента заиграла историческими цветами (красный бант, зелёный лист, жёлтая кайма)
+    </div>
+</div>
+
+<script>
+    (function(){
+        // ----- ЭТАЛОННЫЕ ЦВЕТА (исторически верные: красный бант, зелёный лист, жёлтая отделка)
+        // Целевые RGB для ленты: ярко-красный, насыщенный зелёный, умеренный синий чтобы дать желтизну в деталях.
+        // В нашем тесте мы анализируем, что "правильный цвет" получается при R=215, G=140, B=65 (тёплый исторический оттенок банта + листья)
+        // Но для драматургии и точности отсылки: классический результат максвелловского опыта даёт красный бант, зелёный лист, жёлтая отделка.
+        // После экспериментов с оригинальным фото ленты: R~210 G~130 B~70 даёт аутентичный вид.
+        const TARGET_R = 210;
+        const TARGET_G = 130;
+        const TARGET_B = 70;
+        
+        // Допуск ±6 для более дружелюбной игры, но с сохранением ощущения точности
+        const TOLERANCE = 6;
+        
+        // DOM элементы
+        const canvas = document.getElementById('photoCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        const redSlider = document.getElementById('redSlider');
+        const greenSlider = document.getElementById('greenSlider');
+        const blueSlider = document.getElementById('blueSlider');
+        const redVal = document.getElementById('redVal');
+        const greenVal = document.getElementById('greenVal');
+        const blueVal = document.getElementById('blueVal');
+        const attemptSpan = document.getElementById('attemptCount');
+        const victoryDiv = document.getElementById('victoryBox');
+        const hintBtn = document.getElementById('hintButton');
+        
+        let attemptCounter = 0;
+        let victoryAchieved = false;
+        
+        // ---- ОРИГИНАЛЬНОЕ ИЗОБРАЖЕНИЕ (Тартановая лента Кэтрин - стилизованная историческая отсылка)
+        // Рисуем ч/б оригинал ленты, поверх которого будем накладывать цвет через blend режим "overlay"?
+        // Чтобы игра была нагляднее, я создам детализированное изображение ленты с бантом, листьями и узором.
+        // Мы рисуем на canvas сначала "базовое" черно-белое изображение (grayscale).
+        // Затем динамически применяем цветную накладку в режиме "color" или "overlay" прямо при каждом изменении RGB.
+        // Для чистоты механики: изображение Кэтрин (лента) рисуется как ч/б, а поверх накладывается слой с цветом и режимом наложения "color".
+        // Это даёт эффект "раскрашивания" подбором RGB.
+        
+        // Функция отрисовки базового (монохромного) изображения ленты
+        function drawMonochromeRibbon() {
+            const w = canvas.width, h = canvas.height;
+            // очищаем
+            ctx.clearRect(0, 0, w, h);
+            
+            // Фон - старая бумажная текстура (лёгкий винтаж)
+            ctx.fillStyle = "#e9e2d0";
+            ctx.fillRect(0, 0, w, h);
+            
+            // Рисуем бант и ленту в оттенках серого (чёрно-белая фотография)
+            // Центральный бант (прямоугольная зона)
+            ctx.save();
+            
+            // Основная лента (горизонтальная широкая)
+            ctx.fillStyle = "#6a5a4a";
+            ctx.shadowBlur = 0;
+            ctx.beginPath();
+            ctx.roundRect(120, 130, 360, 110, 28);
+            ctx.fill();
+            
+            // Бант слева
+            ctx.fillStyle = "#5e4f3e";
+            ctx.beginPath();
+            ctx.roundRect(70, 120, 70, 130, 30);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.roundRect(460, 120, 70, 130, 30);
+            ctx.fill();
+            
+            // складки и узор тартана (полоски)
+            ctx.fillStyle = "#4c3f31";
+            for(let i=0;i<8;i++){
+                let x = 150 + i*35;
+                ctx.fillRect(x, 145, 12, 80);
+            }
+            ctx.fillStyle = "#4f4234";
+            for(let i=0;i<6;i++){
+                let y = 155 + i*18;
+                ctx.fillRect(190, y, 220, 5);
+            }
+            
+            // изящные листья и детали (в чб)
+            ctx.fillStyle = "#5d5242";
+            ctx.beginPath();
+            ctx.moveTo(310, 115);
+            ctx.quadraticCurveTo(340, 85, 370, 115);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.moveTo(310, 115);
+            ctx.quadraticCurveTo(340, 140, 370, 115);
+            ctx.fill();
+            
+            // центральный бант — узел
+            ctx.fillStyle = "#6e5b47";
+            ctx.beginPath();
+            ctx.ellipse(300, 185, 45, 38, 0, 0, Math.PI*2);
+            ctx.fill();
+            ctx.fillStyle = "#534432";
+            ctx.beginPath();
+            ctx.ellipse(300, 185, 28, 25, 0, 0, Math.PI*2);
+            ctx.fill();
+            
+            // надпись/имитация ткани
+            ctx.fillStyle = "#857458";
+            ctx.font = "italic 14px 'Times New Roman'";
+            ctx.fillText("Catherine's Tartan", 245, 290);
+            
+            // небольшие листья, детали
+            ctx.fillStyle = "#5d4a37";
+            for(let s=0;s<12;s++){
+                let xOff = 190 + s*22;
+                ctx.beginPath();
+                ctx.moveTo(xOff, 265);
+                ctx.lineTo(xOff+6, 258);
+                ctx.lineTo(xOff-6, 258);
+                ctx.fill();
+            }
+            
+            // акцент: бант имеет узор клетки
+            ctx.fillStyle = "#4a3e2e";
+            for(let g=0;g<10;g++){
+                ctx.fillRect(280+g*8, 165, 3, 42);
+                ctx.fillRect(310, 165+g*5, 55, 3);
+            }
+            
+            ctx.restore();
+            
+            // Добавляем зернистость, как на старой фотографии
+            const imageData = ctx.getImageData(0,0,w,h);
+            const data = imageData.data;
+            for(let i=0; i<data.length; i+=4){
+                let noise = (Math.random() - 0.5) * 18;
+                data[i] = Math.min(255,Math.max(0, data[i] + noise));     // R
+                data[i+1] = Math.min(255,Math.max(0, data[i+1] + noise)); // G
+                data[i+2] = Math.min(255,Math.max(0, data[i+2] + noise)); // B
+            }
+            ctx.putImageData(imageData,0,0);
+        }
+        
+        // Helper для roundRect
+        if (!CanvasRenderingContext2D.prototype.roundRect) {
+            CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r) {
+                if (w < 2 * r) r = w / 2;
+                if (h < 2 * r) r = h / 2;
+                this.moveTo(x+r, y);
+                this.lineTo(x+w-r, y);
+                this.quadraticCurveTo(x+w, y, x+w, y+r);
+                this.lineTo(x+w, y+h-r);
+                this.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
+                this.lineTo(x+r, y+h);
+                this.quadraticCurveTo(x, y+h, x, y+h-r);
+                this.lineTo(x, y+r);
+                this.quadraticCurveTo(x, y, x+r, y);
+                return this;
+            };
+        }
+        
+        // Применение цвета через наложение (color blend) поверх монохромного изображения.
+        // Сохраняем исходное ч/б изображение в отдельный offscreen canvas, потом поверх рисуем цветной слой в режиме 'color'.
+        let monochromeCanvas = null;
+        
+        function initMonochromeCache() {
+            monochromeCanvas = document.createElement('canvas');
+            monochromeCanvas.width = canvas.width;
+            monochromeCanvas.height = canvas.height;
+            const monoCtx = monochromeCanvas.getContext('2d');
+            // сохраняем текущий канвас, рисуем чб сцену в monoCtx
+            drawMonochromeRibbon(); // рисуем на основном canvas, потом скопируем
+            monoCtx.drawImage(canvas, 0, 0);
+            // перерисуем основной canvas из монохромного кэша
+            ctx.drawImage(monochromeCanvas, 0, 0);
+        }
+        
+        // главная функция рендеринга с текущими RGB
+        function renderColorOverlay() {
+            if(!monochromeCanvas) {
+                initMonochromeCache();
+            }
+            // берем значения ползунков
+            let r = parseInt(redSlider.value);
+            let g = parseInt(greenSlider.value);
+            let b = parseInt(blueSlider.value);
+            
+            // сначала копируем ч/б изображение на основной canvas
+            ctx.drawImage(monochromeCanvas, 0, 0);
+            
+            // создаем временный canvas для цветного наложения
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = canvas.width;
+            tempCanvas.height = canvas.height;
+            const tempCtx = tempCanvas.getContext('2d');
+            
+            // заливаем цветом (R,G,B) c альфа = 0.78 для сочного, но не перекрывающего эффекта
+            tempCtx.fillStyle = `rgba(${r}, ${g}, ${b}, 0.72)`;
+            tempCtx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // режим наложения "color" - смешивает цвет и насыщенность, сохраняя яркость оригинала
+            ctx.globalCompositeOperation = "color";
+            ctx.drawImage(tempCanvas, 0, 0);
+            // возвращаем стандартный режим
+            ctx.globalCompositeOperation = "source-over";
+            
+            // Добавляем зернистость для винтажности (небольшая)
+            const finalData = ctx.getImageData(0,0,canvas.width,canvas.height);
+            const px = finalData.data;
+            for(let i=0; i<px.length; i+=4){
+                let grain = (Math.random() - 0.5) * 12;
+                px[i] = Math.min(255,Math.max(0, px[i] + grain));
+                px[i+1] = Math.min(255,Math.max(0, px[i+1] + grain));
+                px[i+2] = Math.min(255,Math.max(0, px[i+2] + grain));
+            }
+            ctx.putImageData(finalData,0,0);
+        }
+        
+        // проверка победы
+        function checkVictory() {
+            if(victoryAchieved) return true;
+            const currentR = parseInt(redSlider.value);
+            const currentG = parseInt(greenSlider.value);
+            const currentB = parseInt(blueSlider.value);
+            
+            const matchR = Math.abs(currentR - TARGET_R) <= TOLERANCE;
+            const matchG = Math.abs(currentG - TARGET_G) <= TOLERANCE;
+            const matchB = Math.abs(currentB - TARGET_B) <= TOLERANCE;
+            
+            if(matchR && matchG && matchB) {
+                victoryAchieved = true;
+                victoryDiv.classList.remove('hidden');
+                // Дополнительно добавим эффект свечения
+                canvas.style.transition = "box-shadow 0.2s";
+                canvas.style.boxShadow = "0 0 0 3px #ffcf7a, 0 0 0 8px rgba(255,200,100,0.3)";
+                return true;
+            } else {
+                if(victoryDiv && !victoryDiv.classList.contains('hidden') && !victoryAchieved === false){
+                    // если вдруг раньше была победа, но значения сбились? блокируем, но по условию победа окончательная
+                }
+            }
+            return false;
+        }
+        
+        // обработчики слайдеров + счетчик попыток
+        let lastValues = {r:0,g:0,b:0};
+        function updateFromSliders() {
+            if(victoryAchieved) return; // если уже собрали, не меняем счётчик, но можно позволить менять? по механике победа фиксирует успех. но пусть не увеличивает попытки.
+            const newR = parseInt(redSlider.value);
+            const newG = parseInt(greenSlider.value);
+            const newB = parseInt(blueSlider.value);
+            
+            // обновляем цифры
+            redVal.innerText = newR;
+            greenVal.innerText = newG;
+            blueVal.innerText = newB;
+            
+            // если хоть одно значение изменилось относительно прошлого шага, увеличиваем попытки
+            if(lastValues.r !== newR || lastValues.g !== newG || lastValues.b !== newB) {
+                if(!victoryAchieved) {
+                    attemptCounter++;
+                    attemptSpan.innerText = attemptCounter;
+                }
+                lastValues = {r: newR, g: newG, b: newB};
+            }
+            
+            renderColorOverlay();
+            checkVictory();
+        }
+        
+        function setSlidersAndUpdate(r,g,b) {
+            if(victoryAchieved) return;
+            redSlider.value = r;
+            greenSlider.value = g;
+            blueSlider.value = b;
+            redVal.innerText = r;
+            greenVal.innerText = g;
+            blueVal.innerText = b;
+            // принудительно меняем lastValues, чтобы не считать попытки при подсказке как новую попытку (но счетчик попыток — это же взаимодействие игрока)
+            // подсказка — это тоже действие, увеличим счетчик честно? по геймдизайну логично: использование подсказки тоже попытка собрать цвет.
+            if(!victoryAchieved) {
+                attemptCounter++;
+                attemptSpan.innerText = attemptCounter;
+            }
+            lastValues = {r: r, g: g, b: b};
+            renderColorOverlay();
+            checkVictory();
+        }
+        
+        // подсказка — установить значения близкие к эталону, но не идеальные, чтобы игрок сам докрутил
+        function showHint() {
+            if(victoryAchieved) {
+                return;
+            }
+            // даём значения в пределах допуска, но чуть с偏移 (например R=205, G=127, B=68)
+            let hintR = TARGET_R - 4;
+            let hintG = TARGET_G - 3;
+            let hintB = TARGET_B - 2;
+            hintR = Math.min(255, Math.max(0, hintR));
+            hintG = Math.min(255, Math.max(0, hintG));
+            hintB = Math.min(255, Math.max(0, hintB));
+            setSlidersAndUpdate(hintR, hintG, hintB);
+            // Дополнительно лёгкий эффект
+            const msgHint = document.createElement('div');
+            // но можно просто визуально подсветить слайдеры
+            victoryDiv.classList.contains('hidden') ? null : null;
+        }
+        
+        // инициализация событий
+        function initGame() {
+            canvas.width = 600;
+            canvas.height = 400;
+            drawMonochromeRibbon();
+            initMonochromeCache();
+            // начальные значения ползунков (серый баланс)
+            redSlider.value = 85;
+            greenSlider.value = 85;
+            blueSlider.value = 85;
+            redVal.innerText = 85;
+            greenVal.innerText = 85;
+            blueVal.innerText = 85;
+            lastValues = {r:85, g:85, b:85};
+            attemptCounter = 0;
+            attemptSpan.innerText = "0";
+            victoryAchieved = false;
+            victoryDiv.classList.add('hidden');
+            canvas.style.boxShadow = "none";
+            renderColorOverlay();
+            
+            redSlider.addEventListener('input', updateFromSliders);
+            greenSlider.addEventListener('input', updateFromSliders);
+            blueSlider.addEventListener('input', updateFromSliders);
+            hintBtn.addEventListener('click', () => showHint());
+        }
+        
+        initGame();
+    })();
+</script>
+</body>
+</html>
